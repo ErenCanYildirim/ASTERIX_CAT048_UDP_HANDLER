@@ -13,3 +13,9 @@
         clippy::unimplemented
     )
 )]
+
+pub mod error;
+pub mod framing;
+
+pub use error::FramingError;
+pub use framing::{DataBlock, DataBlocks, data_blocks};

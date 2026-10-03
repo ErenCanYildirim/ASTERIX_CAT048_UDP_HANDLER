@@ -10,8 +10,8 @@ license = "MIT OR Apache-2.0"
 publish = false
 
 # Shared dependency versions live here; crates opt in with `foo.workspace = true`.
-# Intentionally empty for PR 1.
 [workspace.dependencies]
+thiserror = "2"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
