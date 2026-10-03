@@ -1,5 +1,6 @@
 // Error types for the asterix crate
 
+use crate::cat048::Item;
 use thiserror::Error;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Error)]
@@ -28,5 +29,47 @@ pub enum FramingError {
         offset: usize,
         declared: usize,
         available: usize,
+    },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Error)]
+pub enum RecordError {
+    /// The data block is not CAT048.
+    #[error("data block at offset {offset} is CAT{category:03}, expected CAT048")]
+    WrongCategory { offset: usize, category: u8 },
+
+    /// The FSPEC's last octet had FX set but the block ended.
+    #[error("truncated FSPEC at offset {offset}: FX set but no more bytes")]
+    TruncatedFspec { offset: usize },
+
+    /// The FSPEC extends past the last CAT048 FRN.
+    #[error("FSPEC at offset {offset} extends beyond the CAT048 UAP")]
+    FspecTooLong { offset: usize },
+
+    /// The FSPEC flags no items at all.
+    #[error("empty record at offset {offset}: FSPEC flags no items")]
+    EmptyRecord { offset: usize },
+
+    /// An item needs more bytes than remain in the block.
+    #[error(
+        "truncated item {item} at offset {offset}: needs {needed} bytes, {available} available"
+    )]
+    TruncatedItem {
+        offset: usize,
+        item: Item,
+        needed: usize,
+        available: usize,
+    },
+
+    /// An explicit-length item declared length 0.
+    #[error("item {item} at offset {offset} declares explicit length 0")]
+    ZeroExplicitLength { offset: usize, item: Item },
+
+    /// A compound item flags a subfield the UAP does not define.
+    #[error("item {item} at offset {offset} flags undefined subfield {subfield}")]
+    UndefinedSubfield {
+        offset: usize,
+        item: Item,
+        subfield: usize,
     },
 }
