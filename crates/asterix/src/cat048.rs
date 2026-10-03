@@ -4,9 +4,13 @@
 //! Each record starts with an FSPEC, followed by items in UAP order
 //!
 pub mod decode;
+pub mod encode;
+pub mod report;
 
 use core::fmt;
 use core::iter::FusedIterator;
+pub use encode::encode_block;
+pub use report::{Instrumentation, Report};
 
 use crate::error::RecordError;
 use crate::format::{FX, Format, LenError, item_len};

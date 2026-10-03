@@ -6,6 +6,7 @@
 
 use core::convert::Infallible;
 
+use super::report::Instrumentation;
 use super::{Item, Record};
 use crate::error::DecodeError;
 use crate::units::{
@@ -13,11 +14,11 @@ use crate::units::{
 };
 
 /// Bit 8 of the first octet in I048/070 and I048/090: 1 = code not validated.
-const V_BIT: u8 = 0x80;
+pub(super) const V_BIT: u8 = 0x80;
 /// Bit 7 of the first octet in I048/070 and I048/090: 1 = garbled code.
-const G_BIT: u8 = 0x40;
+pub(super) const G_BIT: u8 = 0x40;
 /// Bit 6 of the first octet in I048/070: 1 = not extracted during the last scan.
-const L_BIT: u8 = 0x20;
+pub(super) const L_BIT: u8 = 0x20;
 /// Low 12 bits: Mode-3/A code (I048/070) and track number (I048/161).
 const LOW_12_BITS: u16 = 0x0FFF;
 
@@ -42,10 +43,7 @@ impl TryFrom<[u8; 3]> for TimeOfDay {
     /// I048/140: 24-bit unsigned count of 1/128 s since midnight.
     fn try_from([b0, b1, b2]: [u8; 3]) -> Result<Self, Self::Error> {
         let ticks = u32::from_be_bytes([0, b0, b1, b2]);
-        if ticks >= Self::MAX_TICKS {
-            return Err(DecodeError::TimeOutOfRange { ticks });
-        }
-        Ok(Self(ticks))
+        Self::from_ticks(ticks).ok_or(DecodeError::TimeOutOfRange { ticks })
     }
 }
 
@@ -184,6 +182,11 @@ impl Record<'_> {
     /// I048/220 Aircraft Address.
     pub fn aircraft_address(&self) -> Result<Option<AircraftAddress>, DecodeError> {
         self.decode(Item::AircraftAddress)
+    }
+
+    /// Sequence number and send timestamp carried in the SP field.
+    pub fn instrumentation(&self) -> Result<Option<Instrumentation>, DecodeError> {
+        self.decode(Item::SpecialPurpose)
     }
 }
 

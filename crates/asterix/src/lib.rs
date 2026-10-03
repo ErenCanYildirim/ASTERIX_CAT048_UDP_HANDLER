@@ -20,5 +20,5 @@ pub mod format;
 pub mod framing;
 pub mod units;
 
-pub use error::{DecodeError, FramingError, RecordError};
+pub use error::{DecodeError, EncodeError, FramingError, RecordError};
 pub use framing::{DataBlock, DataBlocks, data_blocks};

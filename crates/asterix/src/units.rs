@@ -1,4 +1,5 @@
 //! Newtypes for ASTERIX physical quantities and codes.
+//!
 //! Each type stores the raw wire value as an integer, exactly as transmitted,
 //! and converts to physical units only on request. That keeps decoding lossless
 //! and makes the unit part of the type: a `FlightLevel` cannot be passed where a
@@ -18,6 +19,12 @@ impl TimeOfDay {
     pub const MAX_TICKS: u32 = 86_400 * Self::TICKS_PER_SECOND;
     /// 1/128 s is exactly 7 812 500 ns, so the conversion to `Duration` is lossless.
     const NANOS_PER_TICK: u64 = 7_812_500;
+
+    /// `None` if `ticks` is one day or more.
+    #[must_use]
+    pub fn from_ticks(ticks: u32) -> Option<Self> {
+        (ticks < Self::MAX_TICKS).then_some(Self(ticks))
+    }
 
     /// Raw value in 1/128 s.
     #[must_use]
@@ -53,6 +60,12 @@ impl fmt::Display for TimeOfDay {
 pub struct SlantRange(pub(crate) u16);
 
 impl SlantRange {
+    /// Every 16-bit value is a valid range.
+    #[must_use]
+    pub fn from_raw(raw: u16) -> Self {
+        Self(raw)
+    }
+
     /// Raw value in 1/256 NM.
     #[must_use]
     pub fn raw(self) -> u16 {
@@ -71,6 +84,12 @@ impl SlantRange {
 pub struct Azimuth(pub(crate) u16);
 
 impl Azimuth {
+    /// Every 16-bit value is a valid azimuth.
+    #[must_use]
+    pub fn from_raw(raw: u16) -> Self {
+        Self(raw)
+    }
+
     /// Raw value in 360/2^16 degrees.
     #[must_use]
     pub fn raw(self) -> u16 {
@@ -89,6 +108,19 @@ impl Azimuth {
 pub struct FlightLevel(pub(crate) i16);
 
 impl FlightLevel {
+    /// Smallest value a 14-bit two's complement field can hold.
+    pub const MIN_QUARTERS: i16 = -(1 << 13);
+    /// Largest value a 14-bit two's complement field can hold.
+    pub const MAX_QUARTERS: i16 = (1 << 13) - 1;
+
+    /// `None` if `quarters` does not fit in 14 bits.
+    #[must_use]
+    pub fn from_quarters(quarters: i16) -> Option<Self> {
+        (Self::MIN_QUARTERS..=Self::MAX_QUARTERS)
+            .contains(&quarters)
+            .then_some(Self(quarters))
+    }
+
     /// Raw value in quarter flight levels.
     #[must_use]
     pub fn quarters(self) -> i16 {
@@ -119,6 +151,12 @@ impl fmt::Display for FlightLevel {
 pub struct Mode3A(pub(crate) u16);
 
 impl Mode3A {
+    /// `None` if `code` has more than 4 octal digits. Write codes in octal: `Mode3A::new(0o7500)`.
+    #[must_use]
+    pub fn new(code: u16) -> Option<Self> {
+        (code <= 0o7777).then_some(Self(code))
+    }
+
     /// The 12-bit code as a number. `0o7500` for squawk 7500.
     #[must_use]
     pub fn code(self) -> u16 {
@@ -137,6 +175,12 @@ impl fmt::Display for Mode3A {
 pub struct TrackNumber(pub(crate) u16);
 
 impl TrackNumber {
+    /// `None` if `number` does not fit in 12 bits.
+    #[must_use]
+    pub fn new(number: u16) -> Option<Self> {
+        (number <= 0x0FFF).then_some(Self(number))
+    }
+
     #[must_use]
     pub fn get(self) -> u16 {
         self.0
@@ -154,6 +198,12 @@ impl fmt::Display for TrackNumber {
 pub struct AircraftAddress(pub(crate) u32);
 
 impl AircraftAddress {
+    /// `None` if `address` does not fit in 24 bits.
+    #[must_use]
+    pub fn new(address: u32) -> Option<Self> {
+        (address <= 0x00FF_FFFF).then_some(Self(address))
+    }
+
     #[must_use]
     pub fn get(self) -> u32 {
         self.0
