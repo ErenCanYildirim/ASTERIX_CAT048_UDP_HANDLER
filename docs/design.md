@@ -77,6 +77,17 @@ A CAT048 block's record bytes are split into records, and each record into raw i
 - **After an error, iteration stops**, for the same reason as framing: the next record's start is unknown.
 - **Items are stored in a fixed array indexed by FRN** (`[Option<&[u8]>; 28]`): O(1) lookup, no allocation.
 
+## Typed items (PR 4)
+
+Decoded: I048/010, /140, /040, /070, /090, /161, /220. Field layouts and scaling checked against CAT048 v1.32 (`zoranbosnjak/asterix-specs`).
+
+- **Newtypes store the raw wire integer** (`FlightLevel(i16)` in quarter FL, `SlantRange(u16)` in 1/256 NM, ...). Decoding is lossless; conversion to `f64` physical units happens only on request, through methods named for the unit (`feet()`, `nautical_miles()`, `degrees()`).
+- **`From` for items that cannot fail, `TryFrom` for items with invalid values.** Only I048/140 can be invalid (one day or more).
+- **Validity flags are decoded, not acted on.** V (not validated), G (garbled) and L (not from this scan) are exposed as booleans. Whether to use a garbled code is the consumer's decision, not the decoder's.
+- **Spare bits are ignored**, not rejected (I048/070 bit 13, I048/161 bits 16–13). They carry no meaning, and rejecting them would drop otherwise valid reports.
+- **Record accessors return `Result<Option<T>, DecodeError>`:** `Ok(None)` = item absent, `Err` = item present but invalid. Absent and invalid are different situations and must not be collapsed.
+
+
 ## Non-goals
 
 - No tracker: no association, smoothing or prediction.

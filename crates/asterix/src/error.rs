@@ -73,3 +73,19 @@ pub enum RecordError {
         subfield: usize,
     },
 }
+
+/// Why a present item could not be decoded into a typed value.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Error)]
+pub enum DecodeError {
+    /// The item's byte length does not match its fixed size.
+    #[error("item {item} is {actual} bytes, expected {expected}")]
+    WrongLength {
+        item: Item,
+        expected: usize,
+        actual: usize,
+    },
+
+    /// I048/140 was one day or more: not a valid time of day.
+    #[error("time of day {ticks}/128 s is not below 24 h")]
+    TimeOutOfRange { ticks: u32 },
+}
