@@ -38,6 +38,23 @@ loadgen ──UDP──▶ [kernel socket buffer] ──▶ receive ──▶ [b
 
 Every run must satisfy: *sent = processed + app-dropped + kernel-dropped + decode-failed + unexplained*, with unexplained = 0.
 
+## Framing (PR 2)
+
+A datagram is split into data blocks (`CAT | LEN | records`). Record splitting needs FSPEC parsing and happens in the record layer.
+
+| Input | Decision |
+| --- | --- |
+| Empty datagram | Error. A datagram with no blocks carries nothing and should be counted as a decode failure. |
+| Fewer than 3 bytes left for a header | Error, including trailing bytes after valid blocks. |
+| LEN < 3 | Error: impossible, LEN includes the header. |
+| LEN = 3 | Error: the spec requires at least one record per block. |
+| LEN > bytes remaining | Error. |
+| Non-048 category | Not an error. Framing is category-agnostic; the caller decides. |
+
+- **After an error, iteration stops.** A wrong LEN means the next block's start is unknown, so continuing would parse garbage as headers. Blocks before the error are still returned.
+- **Iterator of `Result`, not `Result<Vec<_>>`:** no allocation, and good blocks before a bad one are not thrown away.
+- **Zero-copy:** blocks borrow their record bytes from the datagram buffer.
+
 ## Non-goals
 
 - No tracker: no association, smoothing or prediction.
