@@ -88,4 +88,24 @@ pub enum DecodeError {
     /// I048/140 was one day or more: not a valid time of day.
     #[error("time of day {ticks}/128 s is not below 24 h")]
     TimeOutOfRange { ticks: u32 },
+
+    /// A mandatory item is absent.
+    #[error("mandatory item {item} is missing")]
+    MissingItem { item: Item },
+
+    /// The SP field does not start with this project's layout tag.
+    #[error("SP field has layout tag {tag:#04x}, expected 0x01")]
+    UnrecognizedSpecialPurpose { tag: u8 },
+}
+
+/// Why reports could not be encoded into a data block.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Error)]
+pub enum EncodeError {
+    /// A data block must contain at least one record.
+    #[error("cannot encode an empty data block")]
+    EmptyBlock,
+
+    /// The block exceeds the 16-bit LEN field.
+    #[error("data block would be {len} bytes, maximum is 65535")]
+    BlockTooLarge { len: usize },
 }

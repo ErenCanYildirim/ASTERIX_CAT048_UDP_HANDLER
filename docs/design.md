@@ -87,6 +87,27 @@ Decoded: I048/010, /140, /040, /070, /090, /161, /220. Field layouts and scaling
 - **Spare bits are ignored**, not rejected (I048/070 bit 13, I048/161 bits 16–13). They carry no meaning, and rejecting them would drop otherwise valid reports.
 - **Record accessors return `Result<Option<T>, DecodeError>`:** `Ok(None)` = item absent, `Err` = item present but invalid. Absent and invalid are different situations and must not be collapsed.
 
+## Encoder and SP field (PR 5)
+
+- **`Report` is the owned form of a record.** `Record<'a>` borrows from the datagram; `Report` holds only `Copy` values, so it can outlive the buffer and cross task boundaries (needed from PR 8).
+- **Validation happens at construction, so encoding cannot fail per report.** Unit constructors (`FlightLevel::from_quarters`, `Mode3A::new`, ...) return `None` for values that do not fit their wire field. The only encoding errors are block-level: empty, or longer than the 16-bit LEN allows. On error the output buffer is left unchanged.
+- **Encoder appends to a caller-owned `Vec<u8>`** so the load generator can reuse one buffer for every datagram.
+- **FSPEC is always minimal:** trailing all-zero octets are dropped.
+
+SP field layout (18 bytes, big-endian):
+
+| Offset | Size | Field |
+| --- | --- | --- |
+| 0 | 1 | LEN = 18 |
+| 1 | 1 | Layout tag = 0x01 |
+| 2 | 8 | Sequence number (u64) |
+| 10 | 8 | Send timestamp, ns (u64) |
+
+- **The tag** distinguishes this layout from other SP content; an unknown tag is a decode error, not silently ignored.
+- **u64 for both fields:** a sequence number never wraps in practice, and nanoseconds since an arbitrary epoch fit for ~584 years.
+- **The crate does not define the clock.** The sender decides what the timestamp means (intended send time on a monotonic clock, per the latency definition above).
+
+Testing: hand-built byte fixtures for the encoder, plus a `proptest` round trip (random valid reports → encode → frame → split → decode → equal). The round trip cannot catch a mistake made identically in encoder and decoder; the fixtures exist for that.
 
 ## Non-goals
 
