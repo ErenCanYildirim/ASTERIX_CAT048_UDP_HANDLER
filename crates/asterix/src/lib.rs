@@ -18,6 +18,7 @@ pub mod cat048;
 pub mod error;
 pub mod format;
 pub mod framing;
+pub mod units;
 
-pub use error::{FramingError, RecordError};
+pub use error::{DecodeError, FramingError, RecordError};
 pub use framing::{DataBlock, DataBlocks, data_blocks};

@@ -3,6 +3,8 @@
 //! A CAT048 block holds one or more records back to back, with no length field per record
 //! Each record starts with an FSPEC, followed by items in UAP order
 //!
+pub mod decode;
+
 use core::fmt;
 use core::iter::FusedIterator;
 
