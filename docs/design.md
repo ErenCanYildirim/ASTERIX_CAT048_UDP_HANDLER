@@ -55,6 +55,28 @@ A datagram is split into data blocks (`CAT | LEN | records`). Record splitting n
 - **Iterator of `Result`, not `Result<Vec<_>>`:** no allocation, and good blocks before a bad one are not thrown away.
 - **Zero-copy:** blocks borrow their record bytes from the datagram buffer.
 
+## Records and items (PR 3)
+
+A CAT048 block's record bytes are split into records, and each record into raw item slices, by walking the FSPEC and the UAP. No item is interpreted yet.
+
+- **UAP is a table, not code.** Each FRN maps to an item and one of five encodings (fixed, extended, repetitive, explicit, compound). One generic length function handles all of them.
+- **UAP edition:** CAT048 v1.32, cross-checked item by item against the independent machine-readable definitions in `zoranbosnjak/asterix-specs`. I048/030 is "repetitive FX" there; on the wire it has the same length rule as an extended item.
+- **Every item's length is implemented**, even items we never interpret, because a record has no length field: skipping an item requires knowing its length.
+
+| Input | Decision |
+| --- | --- |
+| Non-CAT048 block | Error up front (`WrongCategory`). |
+| FSPEC with FX set and no next byte | Error. |
+| FSPEC with FX set in octet 4 | Error: there is no FRN 29. |
+| FSPEC flagging no items | Error: an empty record carries nothing. |
+| Item longer than the remaining block | Error, naming the item and its offset. |
+| Repetitive item with REP = 0 | Allowed: unambiguous length, harmless. |
+| Explicit item with LEN = 0 | Error: LEN counts itself, so 0 is impossible. |
+| Compound item flagging an undefined subfield | Error: its length is unknown. |
+
+- **After an error, iteration stops**, for the same reason as framing: the next record's start is unknown.
+- **Items are stored in a fixed array indexed by FRN** (`[Option<&[u8]>; 28]`): O(1) lookup, no allocation.
+
 ## Non-goals
 
 - No tracker: no association, smoothing or prediction.
